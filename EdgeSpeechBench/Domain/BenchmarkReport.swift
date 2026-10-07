@@ -29,6 +29,7 @@ nonisolated enum BenchmarkReport {
         Sampled peak app footprint: \(MetricFormat.bytes(run.memory.sampledPeakBytes))
         Configuration: \(run.model.computeConfiguration)
         Thermal: \(run.thermalStart) → \(run.thermalEnd)
+        Repeatability: \(ThermalContext.repeatedRunNote(run.warmTimes))
         WER: \(run.wordErrorRate.map { String(format: "%.2f%%", $0 * 100) } ?? "Not available")
 
         Methodology: monotonic wall clock; one provider-cold session, excluded

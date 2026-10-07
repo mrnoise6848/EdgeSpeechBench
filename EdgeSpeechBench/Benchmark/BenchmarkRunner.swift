@@ -20,6 +20,7 @@ actor BenchmarkRunner {
              device: DeviceContext, progress: @Sendable (BenchmarkProgress) async -> Void) async throws -> BenchmarkRun {
         guard !running else { throw BenchmarkError.invalidConfiguration }
         try configuration.validate()
+        try ThermalContext.checkResources()
         running = true
         defer { running = false }
         let memory = MemorySampler()
@@ -29,6 +30,7 @@ actor BenchmarkRunner {
             let audio = try await normalizer.prepare(sample, sampleRate: rate)
             try Task.checkCancellation()
             let metadata = await model.metadata()
+            let thermalStart = ThermalContext.state()
             let baseline = MemorySampler.footprint()
             await memory.start()
             await progress(.cold)
@@ -55,7 +57,7 @@ actor BenchmarkRunner {
                                 firstInferenceTime: cold.firstInference, coldStartTime: cold.total,
                                 warmTimes: warm.times,
                                 memory: MemoryMetrics(beforeLoadBytes: baseline, sampledPeakBytes: peak, afterInferenceBytes: after),
-                                thermalStart: "Not available", thermalEnd: "Not available",
+                                thermalStart: thermalStart, thermalEnd: ThermalContext.state(),
                                 wordErrorRate: WordErrorRate.calculate(reference: sample.reference, hypothesis: warm.lastResult.transcript), success: true, error: nil)
         } catch {
             _ = await memory.stop()

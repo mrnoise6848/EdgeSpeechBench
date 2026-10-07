@@ -10,6 +10,7 @@ nonisolated struct WarmMeasurement: Sendable {
         var result = InferenceResult(transcript: "")
         for index in 0..<repetitions {
             try Task.checkCancellation()
+            try ThermalContext.checkResources()
             await progress(index + 1)
             let measured = try await BenchmarkTiming.measure { try await model.transcribe(audio: audio) }
             result = measured.0
