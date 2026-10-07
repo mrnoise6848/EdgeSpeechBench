@@ -83,7 +83,7 @@ nonisolated struct BenchmarkRun: Identifiable, Codable, Sendable {
     var summary: BenchmarkSummary { BenchmarkSummary(values: warmTimes) }
     var realTimeFactor: Double? {
         guard audioDuration > 0, let median = summary.median else { return nil }
-        return median / audioDuration
+        return RealTimeFactor.calculate(inference: median, audio: audioDuration)
     }
 }
 
