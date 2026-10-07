@@ -3,9 +3,16 @@ import XCTest
 final class EdgeSpeechBenchUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
     @MainActor func testBenchmarkControlsAndHistory() throws {
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launch()
-        XCTAssertTrue(app.buttons["runBenchmark"].waitForExistence(timeout: 10))
+        let runButton = app.buttons["runBenchmark"]
+        if !runButton.exists { app.swipeUp() }
+        XCTAssertTrue(runButton.waitForExistence(timeout: 10))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Benchmark screen (simulator; no fabricated results)"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
         XCTAssertTrue(app.staticTexts["benchmarkStatus"].exists)
         let history = app.buttons["Benchmark History"]
         app.swipeUp()
@@ -14,6 +21,7 @@ final class EdgeSpeechBenchUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Benchmark History"].waitForExistence(timeout: 5))
     }
     @MainActor func testModelInformationAndPrivacy() throws {
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launch()
         app.swipeUp()

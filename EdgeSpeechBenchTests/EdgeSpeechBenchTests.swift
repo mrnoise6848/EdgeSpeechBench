@@ -44,46 +44,56 @@ final class EdgeSpeechBenchTests: XCTestCase {
         XCTAssertEqual(BenchmarkExport.escape("a,\"b\""), "\"a,\"\"b\"\"\"")
     }
     func testRunnerNormalizationPersistenceAndExport() async throws {
-        let samples = AudioCatalog.bundled()
-        XCTAssertEqual(samples.count, 3)
-        let sample = try XCTUnwrap(samples.first)
-        let normalizer = AudioNormalizer()
-        let first = try await normalizer.prepare(sample, sampleRate: 16000)
-        let second = try await normalizer.prepare(sample, sampleRate: 16000)
-        XCTAssertEqual(first.url, second.url)
-        XCTAssertEqual(first.duration, 11, accuracy: 0.02)
-        XCTAssertEqual(first.channels, 1)
-        let model = FixtureModel()
-        let config = BenchmarkConfiguration(warmupRuns: 1, measuredRuns: 3, timeoutSeconds: 10)
-        var progressEvents: [BenchmarkProgress] = []
-        let run = try await BenchmarkRunner().run(model: model, sample: sample, configuration: config,
-                                                  device: DeviceInformation.capture()) { event in
-            await MainActor.run { progressEvents.append(event) }
-        }
-        let calls = await model.calls
-        let unloaded = await model.unloaded
-        XCTAssertEqual(calls, 5) // one cold + one excluded warmup + three measured
-        XCTAssertTrue(unloaded)
-        XCTAssertEqual(run.warmTimes.count, 3)
-        XCTAssertTrue(run.warmTimes.allSatisfy { $0 > 0 })
-        XCTAssertEqual(run.wordErrorRate, 0)
-        XCTAssertTrue(progressEvents.contains(.warmup(1, 1)))
-        XCTAssertTrue(progressEvents.contains(.measured(3, 3)))
-        let schema = Schema([Item.self, BenchmarkRunRecord.self])
-        let storage = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)])
-        let context = ModelContext(storage)
-        try BenchmarkStore.save(run, in: context)
-        let records = try context.fetch(FetchDescriptor<BenchmarkRunRecord>())
-        XCTAssertEqual(records.count, 1)
-        XCTAssertEqual(try records[0].decode().id, run.id)
-        XCTAssertTrue(PerformanceComparison(lhs: run, rhs: run).mismatches.isEmpty)
-        let exported = try XCTUnwrap(JSONSerialization.jsonObject(with: BenchmarkExport.json(run)) as? [String: Any])
-        XCTAssertNil(exported["transcript"])
-        XCTAssertNil(exported["url"])
-        XCTAssertNotNil(exported["warmTimes"])
-        XCTAssertTrue(String(decoding: BenchmarkExport.csv(run), as: UTF8.self).contains("sha256"))
-        try BenchmarkStore.delete(records, in: context)
-        XCTAssertEqual(try context.fetchCount(FetchDescriptor<BenchmarkRunRecord>()), 0)
+        var stage = "load fixtures"
+        do {
+            let samples = AudioCatalog.bundled()
+            XCTAssertEqual(samples.count, 3)
+            let sample = try XCTUnwrap(samples.first)
+            let normalizer = AudioNormalizer()
+            stage = "normalize first input"
+            let first = try await normalizer.prepare(sample, sampleRate: 16000)
+            stage = "reuse normalized cache"
+            let second = try await normalizer.prepare(sample, sampleRate: 16000)
+            XCTAssertEqual(first.url, second.url)
+            XCTAssertEqual(first.duration, 11, accuracy: 0.02)
+            XCTAssertEqual(first.channels, 1)
+            let model = FixtureModel()
+            let config = BenchmarkConfiguration(warmupRuns: 1, measuredRuns: 3, timeoutSeconds: 10)
+            var progressEvents: [BenchmarkProgress] = []
+            stage = "run benchmark harness"
+            let run = try await BenchmarkRunner().run(model: model, sample: sample, configuration: config,
+                                                      device: DeviceInformation.capture()) { event in
+                await MainActor.run { progressEvents.append(event) }
+            }
+            let calls = await model.calls
+            let unloaded = await model.unloaded
+            XCTAssertEqual(calls, 5) // one cold + one excluded warmup + three measured
+            XCTAssertTrue(unloaded)
+            XCTAssertEqual(run.warmTimes.count, 3)
+            XCTAssertTrue(run.warmTimes.allSatisfy { $0 > 0 })
+            XCTAssertEqual(run.wordErrorRate, 0)
+            XCTAssertTrue(progressEvents.contains(.warmup(1, 1)))
+            XCTAssertTrue(progressEvents.contains(.measured(3, 3)))
+            let schema = Schema([Item.self, BenchmarkRunRecord.self])
+            stage = "create in-memory SwiftData container"
+            let storage = try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)])
+            let context = ModelContext(storage)
+            stage = "save SwiftData record"
+            try BenchmarkStore.save(run, in: context)
+            let records = try context.fetch(FetchDescriptor<BenchmarkRunRecord>())
+            XCTAssertEqual(records.count, 1)
+            XCTAssertEqual(try records[0].decode().id, run.id)
+            XCTAssertTrue(PerformanceComparison(lhs: run, rhs: run).mismatches.isEmpty)
+            stage = "export JSON"
+            let exported = try XCTUnwrap(JSONSerialization.jsonObject(with: BenchmarkExport.json(run)) as? [String: Any])
+            XCTAssertNil(exported["transcript"])
+            XCTAssertNil(exported["url"])
+            XCTAssertNotNil(exported["warmTimes"])
+            XCTAssertTrue(String(decoding: BenchmarkExport.csv(run), as: UTF8.self).contains("sha256"))
+            stage = "delete SwiftData record"
+            try BenchmarkStore.delete(records, in: context)
+            XCTAssertEqual(try context.fetchCount(FetchDescriptor<BenchmarkRunRecord>()), 0)
+        } catch { XCTFail("\(stage): \(error)") }
     }
     func testCancellationCleanupAndInvalidAudio() async throws {
         let sample = try XCTUnwrap(AudioCatalog.bundled().first)
@@ -92,7 +102,12 @@ final class EdgeSpeechBenchTests: XCTestCase {
             try await BenchmarkRunner().run(model: model, sample: sample, configuration: BenchmarkConfiguration(),
                                              device: DeviceInformation.capture()) { _ in }
         }
-        try await Task.sleep(for: .milliseconds(100))
+        for _ in 0..<500 {
+            if await model.calls > 0 { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let started = await model.calls
+        XCTAssertGreaterThan(started, 0, "Cancellation must reach active inference")
         task.cancel()
         do { _ = try await task.value; XCTFail("Cancelled run succeeded") } catch {}
         let unloaded = await model.unloaded

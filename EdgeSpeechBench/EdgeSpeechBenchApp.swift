@@ -5,6 +5,7 @@ import SwiftData
 struct EdgeSpeechBenchApp: App {
     private let container: Result<ModelContainer, Error>
     init() {
+        AudioNormalizer.clearStaleCacheAtLaunch()
         container = Result {
             let schema = Schema([Item.self, BenchmarkRunRecord.self])
             let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false,

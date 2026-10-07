@@ -65,7 +65,11 @@ may download Apple's model. Exports contain only benchmark metadata. See
 Open `EdgeSpeechBench.xcodeproj` in the existing Xcode toolchain. Run the app on a
 compatible physical device, install English assets, choose a fixture and Run Benchmark.
 Tests are intentionally deferred until all 32 implementation phases are committed.
-Final verification evidence and screenshots are added after that gate.
+Final checks and device limitations are recorded in [verification](docs/verification.md).
+
+![Real simulator benchmark screen, before any run](docs/images/benchmark-screen.png)
+
+This screenshot is from the running app; it contains configuration and no invented results.
 
 ## Documentation
 [Architecture](docs/architecture.md) · [Methodology](docs/benchmark-methodology.md) ·
