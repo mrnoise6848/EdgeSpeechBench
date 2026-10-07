@@ -3,9 +3,16 @@ import AVFoundation
 import CryptoKit
 
 actor AudioNormalizer {
+    private var cleaned = false
+    private let cacheRoot = URL.cachesDirectory.appending(path: "BenchmarkPCM", directoryHint: .isDirectory)
     private var cache: [String: PreparedAudio] = [:]
     func prepare(_ sample: AudioSample, sampleRate: Double) throws -> PreparedAudio {
         guard sampleRate.isFinite, sampleRate > 0 else { throw BenchmarkError.invalidAudio("Invalid target rate.") }
+        if !cleaned {
+            try? FileManager.default.removeItem(at: cacheRoot)
+            try FileManager.default.createDirectory(at: cacheRoot, withIntermediateDirectories: true)
+            cleaned = true
+        }
         let hash = try fingerprint(sample.url)
         let key = "\(hash)-\(sampleRate)"
         if let cached = cache[key], FileManager.default.fileExists(atPath: cached.url.path) { return cached }
@@ -18,7 +25,7 @@ actor AudioNormalizer {
               let outputBuffer = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: 8192) else {
             throw BenchmarkError.invalidAudio("Audio converter could not be created.")
         }
-        let url = URL.cachesDirectory.appending(path: "normalized-\(UUID().uuidString).caf")
+        let url = cacheRoot.appending(path: "normalized-\(UUID().uuidString).caf")
         var completed = false
         defer { if !completed { try? FileManager.default.removeItem(at: url) } }
         let output = try AVAudioFile(forWriting: url, settings: target.settings)

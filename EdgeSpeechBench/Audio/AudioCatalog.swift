@@ -18,6 +18,10 @@ actor AudioImporter {
     func importFile(_ source: URL) throws -> AudioSample {
         let scoped = source.startAccessingSecurityScopedResource()
         defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+        let attributes = try source.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+        guard attributes.isRegularFile == true, let bytes = attributes.fileSize, bytes <= 100_000_000 else {
+            throw BenchmarkError.invalidAudio("Choose a regular audio file up to 100 MB.")
+        }
         let file = try AVAudioFile(forReading: source)
         try Self.validate(file)
         let root = URL.documentsDirectory.appending(path: "ImportedAudio", directoryHint: .isDirectory)

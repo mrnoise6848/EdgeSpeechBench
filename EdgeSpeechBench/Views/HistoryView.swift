@@ -3,11 +3,17 @@ import SwiftData
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
-    @Query(sort: \BenchmarkRunRecord.timestamp, order: .reverse) private var records: [BenchmarkRunRecord]
+    @Query private var records: [BenchmarkRunRecord]
     @State private var selected: Set<UUID> = []
     @State private var errorMessage: String?
+    init() {
+        var descriptor = FetchDescriptor<BenchmarkRunRecord>(sortBy: [SortDescriptor(\.timestamp, order: .reverse)])
+        descriptor.fetchLimit = 200
+        _records = Query(descriptor)
+    }
     var body: some View {
         List {
+            Text("Showing the latest 200 runs at most.").font(.caption).foregroundStyle(.secondary)
             if records.isEmpty { ContentUnavailableView("No benchmarks yet", systemImage: "clock", description: Text("Run a benchmark to save real measurements.")) }
             ForEach(records) { record in
                 HStack {
