@@ -65,6 +65,9 @@ struct ResultDetailView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Execution") { ComputeConfigurationView(model: run.model) }
+            Section("Readable report") {
+                Text(BenchmarkReport.text(run)).font(.caption.monospaced()).textSelection(.enabled)
+            }
             Section("Methodology") {
                 Text("Normalization and model download are excluded. Warm timings include new analyzer session preparation, file decoding, inference and final result collection. Runs are sequential; warmups are excluded. Small-run p95 is only descriptive.")
                 Text("SHA-256: \(run.sampleFingerprint)").font(.caption.monospaced()).textSelection(.enabled)
@@ -75,6 +78,11 @@ struct ResultDetailView: View {
             Menu("Export") {
                 Button("JSON report") { prepareExport(csv: false) }
                 Button("CSV report") { prepareExport(csv: true) }
+                Button("Text report") {
+                    document = ExportDocument(data: Data(BenchmarkReport.text(run).utf8))
+                    contentType = .plainText
+                    exporting = true
+                }
             }
         }
         .fileExporter(isPresented: $exporting, document: document, contentType: contentType,
