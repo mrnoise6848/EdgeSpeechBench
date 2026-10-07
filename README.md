@@ -1,82 +1,72 @@
 # EdgeSpeechBench
 
-**How fast does speech AI actually run on an iPhone?**
+**Measure the cost of on-device speech transcription before deciding whether it fits an iPhone workflow.**
 
-A small local iOS engineering showcase measuring real on-device speech file-session
-performance with Swift, SwiftUI, SwiftData, AVFoundation and Apple's SpeechAnalyzer.
+A successful transcript does not tell an engineer how long initialization takes, whether repeated file sessions keep pace with the audio, or how much memory the app consumes. Those boundaries matter when evaluating local speech processing under device and thermal constraints.
 
-## Problem
-A transcription alone says little about initialization cost, repeatability, realtime
-processing or resource usage. This app records those boundaries and their limits.
+EdgeSpeechBench makes them inspectable: it runs repeatable audio fixtures through Apple's SpeechTranscriber, separates provider-cold and warm measurements, saves run context locally and exports reports for comparison. Its value is the measurement harness and explicit methodology; no physical-iPhone benchmark results have been collected in this repository yet.
 
-## Architecture
+<p align="center">
+  <img src="docs/images/benchmark-screen.png" width="360" alt="Simulator configuration screen showing model preset, audio fixture, timeout, warmups and measured runs">
+</p>
+
+*Existing simulator capture before a run: this shows configuration, not performance evidence.*
+
+## What a run measures
+
+```text
+Normalize audio and verify installed assets (outside measured timing)
+    → fresh-provider load + runtime preparation + first file inference
+    → excluded warmups (default: 2)
+    → repeated measured file sessions (default: 5)
+    → statistics + device context + optional fixture WER
+    → local history, comparison and JSON / CSV / text export
+```
+
+Warm sessions include new analyzer preparation, decoding, inference and finalization. These are file-session measurements, not an isolated neural-network kernel benchmark or a live microphone-stream latency test. Apple's system caches cannot be flushed: **provider-cold is not guaranteed OS-cold**. See [benchmark methodology](docs/benchmark-methodology.md).
+
+| Output | Interpretation and boundary |
+|---|---|
+| Load, preparation, first inference, cold total | Separate initialization costs from repeated sessions |
+| Warm median, mean, min/max, nearest-rank p95, sample standard deviation | Describe repeatability; default five samples are a small sample, not a capacity study |
+| Real-time factor | Warm median divided by decoded audio duration |
+| Baseline, sampled peak and endpoint memory | App-process physical footprint, sampled every 100 ms; not total model/system memory or a guaranteed absolute peak |
+| Device/OS/build and thermal context | Context for comparing runs, not control over all system conditions |
+| Optional word error rate | Fixture reference versus transcription; the small corpus does not establish general speech accuracy |
+
+Unavailable model size/version and exact hardware placement are labelled as unavailable. Details: [metrics](docs/metrics.md), [memory measurement](docs/memory-measurement.md), [accuracy](docs/accuracy.md) and [limitations](docs/limitations.md).
+
+## A runner independent of persistence
+
 ```mermaid
 flowchart LR
-    Audio --> Normalize --> SpeechModel --> Runner
-    Runner --> Metrics --> SwiftData
-    SwiftData --> History --> Compare
-    Metrics --> Report --> Export
+    Audio[Bundled or imported audio] --> Normalize[Audio normalization]
+    Normalize --> Runner[BenchmarkRunner actor]
+    Runner <--> Model[SpeechModel / Apple provider]
+    Runner --> Result[Immutable run result]
+    Result --> Store[SwiftData history]
+    Store --> Compare[Compare runs]
+    Result --> Export[Report export]
 ```
-The runner never imports SwiftData. Actor services own audio and inference;
-main-actor views receive step updates and one immutable result after cleanup.
 
-## Benchmark methodology
-One fresh-provider cold run → configurable excluded warmups (default 2) → repeated
-measured file sessions (default 5). Normalization and asset download are excluded.
-Load, runtime preparation and first inference are separate. Warm sessions include
-new analyzer preparation, file decoding, inference and finalization. System model
-caches are not flushable: provider-cold does not guarantee OS-cold.
+Actor services own normalization, inference and sampling. The runner emits progress and returns a result after resource cleanup; it never imports SwiftData. Main-actor state coordinates the UI and persistence. Cancellation and errors stop sampling and unload the provider. See [runner source](EdgeSpeechBench/Benchmark/BenchmarkRunner.swift), [architecture](docs/architecture.md), [errors](docs/errors.md) and [decisions](docs/decisions/).
 
-## Metrics
-Cold boundaries; warm median/mean/min/max/nearest-rank p95/sample standard deviation;
-RTF = warm median / decoded audio duration; baseline/100 ms sampled peak/endpoint
-app footprint; device/OS/build and coarse thermal context; optional fixture WER.
-Unavailable model size/version and exact hardware placement are labelled honestly.
+## Reproduce a comparison
 
-## Example results
-No physical-iPhone benchmark numbers have been produced in this repository yet.
-Run a session and export its JSON/CSV/text report to obtain real results. No example
-numbers are substituted. Simulator verification cannot establish iPhone performance.
+Open `EdgeSpeechBench.xcodeproj` in the compatible Xcode toolchain; the project targets iOS 26.5. Configure signing for a supported physical device. Install English assets through the separate action, select a fixture, run the benchmark, then inspect History and export the report.
 
-## Models and on-device inference
-Apple SpeechTranscriber en-US, standard or alternatives preset (same model, different
-configuration). No third-party inference dependency, training or conversion pipeline.
-Install English assets using the separate action; benchmarking requires installed
-assets and uses local speech processing. Hardware/runtime support varies.
+Three bundled fixtures use a JFK excerpt, repetition and reduced amplitude. Reports store the normalized input SHA-256, decoded duration/rate/channels and configuration. Use the same physical device, Release build, settings and cool foreground conditions for comparisons. [Fixture provenance](docs/audio-samples.md) documents the input and licensing.
 
-## Swift / SwiftUI / SwiftData
-Existing Xcode project, Swift 5 language mode, iOS 26.5 target and identifiers remain.
-SwiftUI Forms expose run/cancel, import, history, comparison, detail and Files export.
-SwiftData stores versioned benchmark snapshots locally with CloudKit explicitly off.
-Existing Item data and CRUD remain accessible.
+The standard and alternatives presets configure the same Apple en-US model. There is no independent third-party model comparison yet. Imported audio expands inputs, not the available model providers.
 
-## Reproducibility
-Three fixed bundled speech fixtures: JFK excerpt, three repetitions, and reduced
-amplitude. Input SHA-256, decoded duration/rate/channels and configuration are stored.
-Use the same physical device, release build, cool foreground conditions and settings
-for meaningful comparisons. See [fixture provenance](docs/audio-samples.md).
+## Verification and the remaining evidence gap
 
-## Privacy
-No audio/transcript uploads, account, analytics or CloudKit. Explicit asset installation
-may download Apple's model. Exports contain only benchmark metadata. See
-[privacy](docs/privacy.md) and [limitations](docs/limitations.md).
+The [verification record](docs/verification.md) reports successful Release static analysis and a simulator suite with 11 passes, one real-model integration skip and no failures. Harness tests cover statistics, normalization, persistence, exports, deadlines and cancellation. Test-provider timings validate orchestration, not Apple speech performance.
 
-## Build and verification
-Open `EdgeSpeechBench.xcodeproj` in the existing Xcode toolchain. Run the app on a
-compatible physical device, install English assets, choose a fixture and Run Benchmark.
-Tests are intentionally deferred until all 32 implementation phases are committed.
-Final checks and device limitations are recorded in [verification](docs/verification.md).
+Physical-device latency, RTF, memory and WER results remain pending. A signed device run and exported result corpus are the next evidence needed; simulator success cannot substitute for them.
 
-![Real simulator benchmark screen, before any run](docs/images/benchmark-screen.png)
+## Local processing and scope
 
-This screenshot is from the running app; it contains configuration and no invented results.
+Benchmarking requires installed assets and uses local speech processing. Asset installation may download Apple's model. SwiftData history has CloudKit disabled; there is no account, analytics or audio/transcript upload path. Exports contain benchmark metadata rather than audio or transcript content. See [privacy](docs/privacy.md).
 
-## Documentation
-[Architecture](docs/architecture.md) · [Methodology](docs/benchmark-methodology.md) ·
-[Audio](docs/audio-pipeline.md) · [Inference](docs/inference.md) · [Metrics](docs/metrics.md) ·
-[Memory](docs/memory-measurement.md) · [SwiftData](docs/swiftdata.md) ·
-[Decisions](docs/decisions)
-
-## Roadmap
-Independent Core ML model provider, selectable configured compute units when exposed,
-more speakers/languages and a larger ground-truth corpus, physical-device result corpus.
+Hardware/runtime support varies. Exact accelerator placement, system-wide model memory and OS-enforced termination are outside the harness's observable guarantees. An independent Core ML provider and a broader speaker/language corpus remain future work.
