@@ -64,14 +64,3 @@ struct RecordDetailView: View {
     }
 }
 
-struct ResultDetailView: View {
-    let run: BenchmarkRun
-    var body: some View {
-        List {
-            ModelMetadataView(metadata: run.model)
-            LabeledContent("Audio", value: run.sampleName)
-            LabeledContent("Duration", value: String(format: "%.3f s", run.audioDuration))
-            LabeledContent("RTF", value: run.realTimeFactor.map { String(format: "%.3fx", $0) } ?? "Not available")
-        }.navigationTitle("Benchmark Result")
-    }
-}
