@@ -67,6 +67,8 @@ nonisolated struct BenchmarkRun: Identifiable, Codable, Sendable {
     let sampleName: String
     let sampleFingerprint: String
     let audioDuration: Double
+    let normalizedSampleRate: Double
+    let normalizedChannels: UInt32
     let configuration: BenchmarkConfiguration
     let device: DeviceContext
     let loadTime: Double

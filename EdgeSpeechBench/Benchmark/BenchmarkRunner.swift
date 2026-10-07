@@ -49,7 +49,8 @@ actor BenchmarkRunner {
             try Task.checkCancellation()
             return BenchmarkRun(id: UUID(), timestamp: Date(), model: metadata,
                                 sampleName: sample.name, sampleFingerprint: audio.fingerprint,
-                                audioDuration: audio.duration, configuration: configuration, device: device,
+                                audioDuration: audio.duration, normalizedSampleRate: audio.sampleRate,
+                                normalizedChannels: audio.channels, configuration: configuration, device: device,
                                 loadTime: cold.load, initializationTime: cold.initialization,
                                 firstInferenceTime: cold.firstInference, coldStartTime: cold.total,
                                 warmTimes: warm.times,
