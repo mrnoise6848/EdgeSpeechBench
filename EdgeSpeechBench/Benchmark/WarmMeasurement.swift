@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct WarmMeasurement: Sendable {
     let times: [Double]
     let lastResult: InferenceResult
-    static func execute(model: any SpeechModel, audio: PreparedAudio, repetitions: Int,
+    static func execute(model: any SpeechModel, audio: PreparedAudio, repetitions: Int, timeout: Double,
                         progress: @Sendable (Int) async -> Void) async throws -> Self {
         var times: [Double] = []
         times.reserveCapacity(repetitions)
@@ -12,7 +12,7 @@ nonisolated struct WarmMeasurement: Sendable {
             try Task.checkCancellation()
             try ThermalContext.checkResources()
             await progress(index + 1)
-            let measured = try await BenchmarkTiming.measure { try await model.transcribe(audio: audio) }
+            let measured = try await BenchmarkTiming.measure { try await InferenceDeadline.run(seconds: timeout) { try await model.transcribe(audio: audio) } }
             result = measured.0
             times.append(measured.1)
         }

@@ -36,7 +36,10 @@ final class BenchmarkViewModel {
                 self.result = run
                 self.status = "Completed"
             } catch is CancellationError { self.status = "Cancelled" }
-            catch { self.status = "Benchmark failed"; self.errorMessage = error.localizedDescription }
+            catch {
+                if Task.isCancelled { self.status = "Cancelled" }
+                else { self.status = "Benchmark failed"; self.errorMessage = error.localizedDescription }
+            }
         }
     }
     private func update(_ progress: BenchmarkProgress) { status = progress.label }

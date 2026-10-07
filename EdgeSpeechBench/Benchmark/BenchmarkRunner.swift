@@ -34,14 +34,15 @@ actor BenchmarkRunner {
             let baseline = MemorySampler.footprint()
             await memory.start()
             await progress(.cold)
-            let cold = try await ColdMeasurement.execute(model: model, audio: audio)
+            let cold = try await ColdMeasurement.execute(model: model, audio: audio, timeout: configuration.timeoutSeconds)
             for index in 0..<configuration.warmupRuns {
                 try Task.checkCancellation()
                 await progress(.warmup(index + 1, configuration.warmupRuns))
-                _ = try await model.transcribe(audio: audio)
+                try ThermalContext.checkResources()
+                _ = try await InferenceDeadline.run(seconds: configuration.timeoutSeconds) { try await model.transcribe(audio: audio) }
             }
             let warm = try await WarmMeasurement.execute(model: model, audio: audio,
-                                                        repetitions: configuration.measuredRuns) { index in
+                                                        repetitions: configuration.measuredRuns, timeout: configuration.timeoutSeconds) { index in
                 await progress(.measured(index, configuration.measuredRuns))
             }
             let after = MemorySampler.footprint()

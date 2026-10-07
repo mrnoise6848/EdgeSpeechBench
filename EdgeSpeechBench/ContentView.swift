@@ -22,6 +22,7 @@ struct ContentView: View {
                         ForEach(model.samples) { Text($0.name).tag($0.id) }
                     }
                     Button("Import local audio") { importing = true }
+                    Stepper("Operation timeout: \(Int(model.configuration.timeoutSeconds)) s", value: $model.configuration.timeoutSeconds, in: 10...600, step: 10)
                     Stepper("Warmups: \(model.configuration.warmupRuns)", value: $model.configuration.warmupRuns, in: 0...5)
                     Stepper("Measured runs: \(model.configuration.measuredRuns)", value: $model.configuration.measuredRuns, in: 2...20)
                 }.disabled(model.isRunning)

@@ -42,7 +42,10 @@ actor AppleSpeechModel: SpeechModel {
         guard let analyzer else { throw BenchmarkError.notLoaded }
         let file = try AVAudioFile(forReading: audio.url)
         format = file.processingFormat
-        try await analyzer.prepareToAnalyze(in: format)
+        try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            try await analyzer.prepareToAnalyze(in: format)
+        } onCancel: { Task { await analyzer.cancelAndFinishNow() } }
     }
     func transcribe(audio: PreparedAudio) async throws -> InferenceResult {
         guard format != nil else { throw BenchmarkError.notLoaded }

@@ -19,13 +19,13 @@ nonisolated struct ColdMeasurement: Sendable {
     let firstInference: Double
     let total: Double
     let result: InferenceResult
-    static func execute(model: any SpeechModel, audio: PreparedAudio) async throws -> Self {
+    static func execute(model: any SpeechModel, audio: PreparedAudio, timeout: Double) async throws -> Self {
         let clock = ContinuousClock()
         let start = clock.now
-        let (_, load) = try await BenchmarkTiming.measure { try await model.load() }
+        let (_, load) = try await BenchmarkTiming.measure { try await InferenceDeadline.run(seconds: timeout) { try await model.load() } }
         try Task.checkCancellation()
-        let (_, initialization) = try await BenchmarkTiming.measure { try await model.initialize(audio: audio) }
-        let (result, inference) = try await BenchmarkTiming.measure { try await model.transcribe(audio: audio) }
+        let (_, initialization) = try await BenchmarkTiming.measure { try await InferenceDeadline.run(seconds: timeout) { try await model.initialize(audio: audio) } }
+        let (result, inference) = try await BenchmarkTiming.measure { try await InferenceDeadline.run(seconds: timeout) { try await model.transcribe(audio: audio) } }
         return Self(load: load, initialization: initialization, firstInference: inference,
                     total: BenchmarkTiming.seconds(start.duration(to: clock.now)), result: result)
     }

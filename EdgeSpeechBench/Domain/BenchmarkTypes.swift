@@ -90,13 +90,14 @@ nonisolated struct BenchmarkRun: Identifiable, Codable, Sendable {
 }
 
 nonisolated enum BenchmarkError: LocalizedError, Sendable {
-    case invalidConfiguration, invalidAudio(String), modelUnavailable(String), notLoaded, resourcePressure
+    case invalidConfiguration, invalidAudio(String), modelUnavailable(String), notLoaded, resourcePressure, timedOut
     var errorDescription: String? {
         switch self {
         case .invalidConfiguration: "Choose 2–20 measured runs, 0–5 warmups, and a 10–600 second timeout."
         case .invalidAudio(let reason): "Invalid audio: \(reason)"
         case .modelUnavailable(let reason): "Model unavailable: \(reason)"
         case .notLoaded: "Prepare the model before inference."
+        case .timedOut: "The model operation exceeded its time limit. Try shorter audio or run again after releasing resources."
         case .resourcePressure: "Benchmark stopped because of resource or thermal pressure."
         }
     }
