@@ -1,9 +1,12 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import UIKit
+import Combine
 
 struct ContentView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model = BenchmarkViewModel()
     @State private var importing = false
     @State private var storageError: String?
@@ -17,7 +20,7 @@ struct ContentView: View {
                 Section("Configuration") {
                     Picker("Model preset", selection: $model.choice) {
                         ForEach(ModelChoice.allCases) { Text($0.title).tag($0) }
-                    }
+                    }.pickerStyle(.navigationLink)
                     Picker("Audio sample", selection: $model.selectedSampleID) {
                         ForEach(model.samples) { Text($0.name).tag($0.id) }
                     }
@@ -27,7 +30,7 @@ struct ContentView: View {
                     Stepper("Measured runs: \(model.configuration.measuredRuns)", value: $model.configuration.measuredRuns, in: 2...20)
                 }.disabled(model.isRunning)
                 Section("Run") {
-                    Text(model.status).accessibilityIdentifier("benchmarkStatus")
+                    Text(model.status).font(.subheadline.monospaced()).accessibilityIdentifier("benchmarkStatus")
                     if model.isRunning {
                         Button("Cancel benchmark", role: .destructive) { model.cancel() }
                     } else {
@@ -46,6 +49,7 @@ struct ContentView: View {
                     }
                 }
                 Section {
+                    NavigationLink("Existing local items") { ExistingItemsView() }
                     NavigationLink("Privacy and local data") { PrivacyView() }
                     NavigationLink("Benchmark History") { HistoryView() }
                         .disabled(model.isRunning)
@@ -55,6 +59,14 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("EdgeSpeechBench")
+            .onChange(of: model.isRunning) { UIApplication.shared.isIdleTimerDisabled = model.isRunning }
+            .onChange(of: scenePhase) {
+                if scenePhase != .active && model.isRunning { model.cancel() }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                if model.isRunning { model.cancel() }
+            }
+            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
             .task(id: model.choice) { await model.refreshMetadata() }
             .fileImporter(isPresented: $importing, allowedContentTypes: [.audio]) { outcome in
                 switch outcome {
