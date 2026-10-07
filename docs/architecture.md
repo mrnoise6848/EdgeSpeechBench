@@ -24,3 +24,16 @@ Metrics use monotonic wall clock, repeated end-to-end file inference, and sample
 app physical footprint. System-service model memory and exact CPU/GPU/ANE execution
 are unavailable. A fresh provider does not guarantee a system-cache-cold model.
 No tests are executed before Phase 32. Each completed phase has a separate commit.
+
+## Final source map
+- Domain/: Codable run/configuration, summaries, RTF, WER, comparison and exports.
+- Audio/: fixed catalog, scoped import, bounded converter and cache.
+- Inference/: actor protocol and Apple provider; no cloud speech API.
+- Benchmark/: runner, deadlines, monotonic timing, app footprint and device/thermal context.
+- Persistence/: local SwiftData adapter; errors surfaced to views.
+- Views/: observable main-actor controller, history, comparison, detail/export/privacy.
+
+New domain types explicitly opt out of default MainActor isolation; actor-owned
+services isolate audio/model lifecycles. UI stores one immutable completed result.
+Runtime warm sessions renew analyzers because finalized analyzers cannot restart.
+The provider abstraction allows future independent models without runner changes.
