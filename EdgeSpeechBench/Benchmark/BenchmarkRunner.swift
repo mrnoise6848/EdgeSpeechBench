@@ -33,6 +33,11 @@ actor BenchmarkRunner {
             await memory.start()
             await progress(.cold)
             let cold = try await ColdMeasurement.execute(model: model, audio: audio)
+            for index in 0..<configuration.warmupRuns {
+                try Task.checkCancellation()
+                await progress(.warmup(index + 1, configuration.warmupRuns))
+                _ = try await model.transcribe(audio: audio)
+            }
             let warm = try await WarmMeasurement.execute(model: model, audio: audio,
                                                         repetitions: configuration.measuredRuns) { index in
                 await progress(.measured(index, configuration.measuredRuns))
