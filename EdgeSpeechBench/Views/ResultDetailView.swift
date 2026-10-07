@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 nonisolated enum MetricFormat {
     static func seconds(_ value: Double?) -> String { value.map { String(format: "%.3f s", $0) } ?? "Not available" }
@@ -9,6 +10,17 @@ nonisolated enum MetricFormat {
 
 struct ResultDetailView: View {
     let run: BenchmarkRun
+    @State private var exporting = false
+    @State private var document = ExportDocument()
+    @State private var contentType: UTType = .json
+    @State private var exportError: String?
+    private func prepareExport(csv: Bool) {
+        do {
+            document = ExportDocument(data: csv ? BenchmarkExport.csv(run) : try BenchmarkExport.json(run))
+            contentType = csv ? .commaSeparatedText : .json
+            exporting = true
+        } catch { exportError = error.localizedDescription }
+    }
     var body: some View {
         List {
             Section("Model") { ModelMetadataView(metadata: run.model) }
@@ -59,5 +71,18 @@ struct ResultDetailView: View {
                 Text(run.timestamp.formatted()).font(.caption)
             }
         }.navigationTitle("Benchmark Result")
+        .toolbar {
+            Menu("Export") {
+                Button("JSON report") { prepareExport(csv: false) }
+                Button("CSV report") { prepareExport(csv: true) }
+            }
+        }
+        .fileExporter(isPresented: $exporting, document: document, contentType: contentType,
+                      defaultFilename: "EdgeSpeechBench-\(run.id.uuidString)") { outcome in
+            if case .failure(let error) = outcome { exportError = error.localizedDescription }
+        }
+        .alert("Export failed", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
+            Button("OK") { exportError = nil }
+        } message: { Text(exportError ?? "") }
     }
 }
