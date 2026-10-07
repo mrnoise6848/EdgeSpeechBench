@@ -13,10 +13,21 @@ simulator tests use Xcode's standard ad-hoc signing. No project signing changes.
   cancellation during active inference, invalid audio/configuration and deadlines.
   Five tests passed. Real Apple model integration skipped because SpeechTranscriber
   is unavailable on this simulator; no assets were downloaded.
-- Two UI navigation/control/privacy tests passed in the focused final run.
-- Four launch/appearance/orientation checks passed in the preceding full run.
+- Final full suite: **TEST SUCCEEDED**, 12 tests executed: 11 passed, one real-model
+  test skipped, zero failures. This includes five unit/harness tests, two UI
+  navigation/control/privacy tests and four launch/appearance/orientation checks.
+  Result bundle: `/tmp/EdgeSpeechBench-verified.xcresult`.
 - `git diff --check` passed. No Swift source compiler warnings remain. Xcode emits
   the expected AppIntents metadata notice because this app has no AppIntents dependency.
+
+## Final test command
+```sh
+xcodebuild test -project EdgeSpeechBench.xcodeproj -scheme EdgeSpeechBench \
+  -destination 'platform=iOS Simulator,id=79FCEC2A-D84D-44E2-9019-46A12DEE85DD' \
+  -parallel-testing-enabled NO -derivedDataPath /tmp/EdgeSpeechBenchDerived \
+  -resultBundlePath /tmp/EdgeSpeechBench-verified.xcresult
+```
+Use a new result bundle path for a repeated invocation.
 
 ## Corrections found by verification
 Split the CSV expression for compiler type-checking. Isolated synchronous converter
