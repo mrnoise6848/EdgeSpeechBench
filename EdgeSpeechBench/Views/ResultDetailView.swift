@@ -64,6 +64,10 @@ struct ResultDetailView: View {
                 Text("100 ms sampling may miss brief peaks. System speech-service memory is excluded; this is not model-only memory.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Illustrative accuracy") {
+                LabeledContent("WER (last measured transcript)", value: run.wordErrorRate.map { String(format: "%.2f%%", $0 * 100) } ?? "Not available")
+                Text("Lowercase alphanumeric words; punctuation splits words. One fixed excerpt is not a production accuracy evaluation.").font(.caption).foregroundStyle(.secondary)
+            }
             Section("Execution") { ComputeConfigurationView(model: run.model) }
             Section("Readable report") {
                 Text(BenchmarkReport.text(run)).font(.caption.monospaced()).textSelection(.enabled)

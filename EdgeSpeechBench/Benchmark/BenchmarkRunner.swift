@@ -56,7 +56,7 @@ actor BenchmarkRunner {
                                 warmTimes: warm.times,
                                 memory: MemoryMetrics(beforeLoadBytes: baseline, sampledPeakBytes: peak, afterInferenceBytes: after),
                                 thermalStart: "Not available", thermalEnd: "Not available",
-                                wordErrorRate: nil, success: true, error: nil)
+                                wordErrorRate: WordErrorRate.calculate(reference: sample.reference, hypothesis: warm.lastResult.transcript), success: true, error: nil)
         } catch {
             _ = await memory.stop()
             await model.unload()
