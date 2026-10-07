@@ -2,7 +2,7 @@ import Foundation
 import Speech
 import AVFoundation
 
-actor AppleSpeechModel {
+actor AppleSpeechModel: SpeechModel {
     private var transcriber: SpeechTranscriber?
     private var analyzer: SpeechAnalyzer?
     private var format: AVAudioFormat?
@@ -83,6 +83,12 @@ actor AppleSpeechModel {
             self.transcriber = nil
             throw error
         }
+    }
+    func metadata() async -> ModelMetadata {
+        ModelMetadata(name: alternatives ? "Apple SpeechTranscriber (alternatives)" : "Apple SpeechTranscriber",
+                      version: nil, sizeBytes: nil, language: "en-US", backend: "SpeechAnalyzer",
+                      computeConfiguration: "System managed; hardware execution unavailable",
+                      inputFormat: "Mono Float32 PCM at runtime-selected rate")
     }
     func unload() async {
         await analyzer?.cancelAndFinishNow()
