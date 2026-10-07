@@ -1,32 +1,26 @@
-//
-//  EdgeSpeechBenchApp.swift
-//  EdgeSpeechBench
-//
-//  Created by Mohammad Adib nia on 10/7/26.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct EdgeSpeechBenchApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+    private let container: Result<ModelContainer, Error>
+    init() {
+        container = Result {
+            let schema = Schema([Item.self, BenchmarkRunRecord.self])
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false,
+                                                   cloudKitDatabase: .none)
+            return try ModelContainer(for: schema, configurations: [configuration])
         }
-    }()
-
+    }
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            switch container {
+            case .success(let store):
+                ContentView().modelContainer(store)
+            case .failure(let error):
+                ContentUnavailableView("Local storage unavailable", systemImage: "externaldrive.badge.exclamationmark",
+                                       description: Text(error.localizedDescription))
+            }
         }
-        .modelContainer(sharedModelContainer)
     }
 }
