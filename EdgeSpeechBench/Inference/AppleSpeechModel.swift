@@ -31,6 +31,7 @@ actor AppleSpeechModel: SpeechModel {
         }
     }
     func load() async throws {
+        try Task.checkCancellation()
         let module = makeTranscriber()
         guard await AssetInventory.status(forModules: [module]) == .installed else {
             throw BenchmarkError.modelUnavailable("Install English model assets before benchmarking.")
@@ -54,7 +55,12 @@ actor AppleSpeechModel: SpeechModel {
             let module = makeTranscriber()
             transcriber = module
             analyzer = SpeechAnalyzer(modules: [module], options: .init(priority: .userInitiated, modelRetention: .lingering))
-            try await analyzer?.prepareToAnalyze(in: format)
+            if let session = analyzer {
+                try await withTaskCancellationHandler {
+                    try Task.checkCancellation()
+                    try await session.prepareToAnalyze(in: format)
+                } onCancel: { Task { await session.cancelAndFinishNow() } }
+            }
         }
         guard let analyzer, let transcriber else { throw BenchmarkError.notLoaded }
         let results = transcriber.results
@@ -82,6 +88,7 @@ actor AppleSpeechModel: SpeechModel {
         } catch {
             collector.cancel()
             await analyzer.cancelAndFinishNow()
+            _ = await collector.result
             self.analyzer = nil
             self.transcriber = nil
             throw error

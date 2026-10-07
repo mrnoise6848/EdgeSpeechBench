@@ -5,8 +5,9 @@ nonisolated enum DeviceInformation {
     static func capture(bundle: Bundle = .main) -> DeviceContext {
         var system = utsname()
         uname(&system)
+        let capacity = MemoryLayout.size(ofValue: system.machine)
         let hardware = withUnsafePointer(to: &system.machine) {
-            $0.withMemoryRebound(to: CChar.self, capacity: MemoryLayout.size(ofValue: system.machine)) {
+            $0.withMemoryRebound(to: CChar.self, capacity: capacity) {
                 String(cString: $0)
             }
         }

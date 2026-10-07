@@ -27,6 +27,7 @@
 		A555D64C3076CB4E009FD72D /* EdgeSpeechBench.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EdgeSpeechBench.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A555D65B3076CB50009FD72D /* EdgeSpeechBenchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EdgeSpeechBenchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A555D6653076CB50009FD72D /* EdgeSpeechBenchUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EdgeSpeechBenchUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A555D6783076CBDD009FD72D /* EdgeSpeechBench.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = EdgeSpeechBench.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -75,6 +76,7 @@
 		A555D6433076CB4E009FD72D = {
 			isa = PBXGroup;
 			children = (
+				A555D6783076CBDD009FD72D /* EdgeSpeechBench.md */,
 				A555D64E3076CB4E009FD72D /* EdgeSpeechBench */,
 				A555D65E3076CB50009FD72D /* EdgeSpeechBenchTests */,
 				A555D6683076CB50009FD72D /* EdgeSpeechBenchUITests */,

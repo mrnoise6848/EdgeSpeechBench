@@ -26,7 +26,9 @@ actor BenchmarkRunner {
         let memory = MemorySampler()
         do {
             await progress(.normalizing)
-            let rate = try await model.requiredSampleRate()
+            let rate = try await InferenceDeadline.run(seconds: configuration.timeoutSeconds) {
+                try await model.requiredSampleRate()
+            }
             let audio = try await normalizer.prepare(sample, sampleRate: rate)
             try Task.checkCancellation()
             let metadata = await model.metadata()
