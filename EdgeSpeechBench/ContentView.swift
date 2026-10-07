@@ -45,6 +45,7 @@ struct ContentView: View {
                     }
                 }
                 Section {
+                    NavigationLink("Privacy and local data") { PrivacyView() }
                     NavigationLink("Benchmark History") { HistoryView() }
                         .disabled(model.isRunning)
                 }
